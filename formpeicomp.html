@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Ocorrências Escolares</title>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script type="text/javascript">
+        // Inicializa o EmailJS com seu User ID (você obtém isso ao criar a conta)
+        (function() {
+            emailjs.init("Jy2wvmvzM5GwE2_Eq");
+        })();
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], 
+        input[type="date"],
+        input[type="file"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 150px;
+            resize: vertical;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #registros {
+            margin-top: 30px;
+        }
+        .ocorrencia {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .preview-image {
+            max-width: 200px;
+            max-height: 200px;
+            margin-top: 10px;
+        }
+        .uploaded-image {
+            max-width: 200px;
+            margin-top: 10px;
+        }
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .alert-success {
+            background-color: #dff0d8;
+            border-color: #d6e9c6;
+            color: #3c763d;
+        }
+        .alert-error {
+            background-color: #f2dede;
+            border-color: #ebccd1;
+            color: #a94442;
+        }
+        #loading {
+            display: none;
+            text-align: center;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Registro de Ocorrências Escolares</h1>
+    
+    <div id="alertMessage"></div>
+    <div id="loading">Enviando ocorrência...</div>
+    
+    <form id="ocorrenciaForm">
+        <div class="form-group">
+            <label for="aluno">Nome do Aluno:</label>
+            <input type="text" id="aluno" required>
+        </div>
+
+        <div class="form-group">
+            <label for="turma">Turma:</label>
+            <input type="text" id="turma" required>
+        </div>
+
+        <div class="form-group">
+            <label for="data">Data:</label>
+            <input type="date" id="data" required>
+        </div>
+
+        <div class="form-group">
+            <label for="tipo">Tipo de Ocorrência:</label>
+            <select id="tipo" required>
+                <option value="">Selecione...</option>
+                <option value="comportamental">Comportamental</option>
+                <option value="disciplinar">Disciplinar</option>
+                <option value="pedagogica">Pedagógica</option>
+                <option value="outros">Outros</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="descricao">Descrição da Ocorrência:</label>
+            <textarea id="descricao" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="imagem">Anexar Imagem:</label>
+            <input type="file" id="imagem" accept="image/*">
+            <div id="imagePreview"></div>
+        </div>
+
+        <button type="submit">Registrar Ocorrência</button>
+    </form>
+
+    <div id="registros">
+        <h2>Ocorrências Registradas</h2>
+    </div>
+
+    <script>
+        function showAlert(message, type) {
+            const alertDiv = document.getElementById('alertMessage');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            setTimeout(() => {
+                alertDiv.textContent = '';
+                alertDiv.className = '';
+            }, 5000);
+        }
+
+        // Preview da imagem
+        document.getElementById('imagem').addEventListener('change', function(e) {
+            const preview = document.getElementById('imagePreview');
+            preview.innerHTML = '';
+            
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'preview-image';
+                    preview.appendChild(img);
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Submissão do formulário
+        document.getElementById('ocorrenciaForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+            
+            const aluno = document.getElementById('aluno').value;
+            const turma = document.getElementById('turma').value;
+            const data = document.getElementById('data').value;
+            const tipo = document.getElementById('tipo').value;
+            const descricao = document.getElementById('descricao').value;
+            const imagemInput = document.getElementById('imagem');
+            
+            let imageBase64 = '';
+            if (imagemInput.files && imagemInput.files[0]) {
+                imageBase64 = await new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.readAsDataURL(imagemInput.files[0]);
+                });
+            }
+
+            // Preparar os dados para envio
+            const templateParams = {
+                to_email: 'chrisjogos2020@gmail.com',
+                aluno: aluno,
+                turma: turma,
+                data: data,
+                tipo: tipo,
+                descricao: descricao,
+                imagem: imageBase64
+            };
+
+            // Enviar email usando EmailJS
+            try {
+                await emailjs.send(
+                    'service_if6ahuc', // Service ID do EmailJS
+                    'template_tapss7q', // Template ID do EmailJS
+                    templateParams
+                );
+                
+                showAlert('Ocorrência registrada e enviada com sucesso!', 'success');
+                
+                // Criar registro visual na página
+                const ocorrencia = document.createElement('div');
+                ocorrencia.className = 'ocorrencia';
+                
+                let conteudoOcorrencia = `
+                    <strong>Aluno:</strong> ${aluno}<br>
+                    <strong>Turma:</strong> ${turma}<br>
+                    <strong>Data:</strong> ${data}<br>
+                    <strong>Tipo:</strong> ${tipo}<br>
+                    <strong>Descrição:</strong> ${descricao}<br>
+                `;
+
+                if (imageBase64) {
+                    const img = document.createElement('img');
+                    img.src = imageBase64;
+                    img.className = 'uploaded-image';
+                    ocorrencia.innerHTML = conteudoOcorrencia;
+                    ocorrencia.appendChild(img);
+                } else {
+                    ocorrencia.innerHTML = conteudoOcorrencia;
+                }
+
+                document.getElementById('registros').appendChild(ocorrencia);
+                
+                // Limpar formulário e preview
+                this.reset();
+                document.getElementById('imagePreview').innerHTML = '';
+                
+            } catch (error) {
+                showAlert('Erro ao enviar a ocorrência. Por favor, tente novamente.', 'error');
+                console.error('Erro:', error);
+            }
+            
+            loading.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
